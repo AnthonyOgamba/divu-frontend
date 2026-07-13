@@ -1,11 +1,11 @@
-import { PlaceholderPage } from "@/components/layout/placeholder-page";
+import type { Metadata } from "next";
+
+import { Dashboard } from "@/components/dashboard/dashboard";
+
+export const metadata: Metadata = {
+  title: "Dashboard",
+};
 
 export default function DashboardPage() {
-  return (
-    <PlaceholderPage
-      title="Dashboard"
-      description="A command center for industrial performance, security posture, and operational health."
-      area="Workspace"
-    />
-  );
+  return <Dashboard />;
 }
