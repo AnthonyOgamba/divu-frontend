@@ -1,11 +1,11 @@
-import { PlaceholderPage } from "@/components/layout/placeholder-page";
+import type { Metadata } from "next";
+
+import { GovernanceWorkspace } from "@/components/governance/governance-workspace";
+
+export const metadata: Metadata = {
+  title: "Data Governance",
+};
 
 export default function GovernancePage() {
-  return (
-    <PlaceholderPage
-      title="Data Governance"
-      description="Establish ownership, classification, policy, lineage, and compliance controls."
-      area="Workspace"
-    />
-  );
+  return <GovernanceWorkspace />;
 }
