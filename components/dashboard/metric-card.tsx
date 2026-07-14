@@ -29,7 +29,7 @@ const icons: Record<DashboardIcon, React.ElementType> = {
   users: Users,
 };
 
-export function MetricCard({ metric }: { metric: DashboardMetric }) {
+export function MetricCard(metric: DashboardMetric) {
   const Icon = icons[metric.icon];
   const severity = metric.severity ?? "neutral";
   const content = (

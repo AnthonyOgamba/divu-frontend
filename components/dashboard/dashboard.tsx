@@ -20,7 +20,7 @@ function MetricBand({ title, metrics }: { title: string; metrics: typeof operati
       </h2>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         {metrics.map((metric) => (
-          <MetricCard key={metric.label} metric={metric} />
+          <MetricCard key={metric.label} {...metric} />
         ))}
       </div>
     </section>
