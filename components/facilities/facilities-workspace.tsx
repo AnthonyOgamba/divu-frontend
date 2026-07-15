@@ -8,6 +8,7 @@ import { GrantAccessModal, RegisterSiteModal } from "./facility-modals";
 import { initialFacilities, initialSiteAccess, operationalInsights, type Facility, type SiteAccess } from "./facilities-data";
 import { ProductionPerformance } from "./production-performance";
 import { SiteAccessPanel } from "./site-access";
+import { canViewAllPlants, currentUserScope, filterByPlantScope } from "@/lib/access-scope";
 
 type FacilitiesTab = "sites" | "performance" | "access";
 
@@ -19,8 +20,8 @@ const tabs: { key: FacilitiesTab; label: string; icon: React.ElementType }[] = [
 
 export function FacilitiesWorkspace() {
   const [activeTab, setActiveTab] = useState<FacilitiesTab>("sites");
-  const [facilities, setFacilities] = useState<Facility[]>(initialFacilities);
-  const [accessRecords, setAccessRecords] = useState<SiteAccess[]>(initialSiteAccess);
+  const [facilities, setFacilities] = useState<Facility[]>(() => filterByPlantScope(initialFacilities, currentUserScope));
+  const [accessRecords, setAccessRecords] = useState<SiteAccess[]>(() => canViewAllPlants(currentUserScope) ? initialSiteAccess : initialSiteAccess.filter((record) => currentUserScope.siteIds.includes(record.facilityId)));
   const [registerOpen, setRegisterOpen] = useState(false);
   const [grantOpen, setGrantOpen] = useState(false);
   const metrics = useMemo(() => {
@@ -42,7 +43,7 @@ export function FacilitiesWorkspace() {
       <header>
         <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-primary">Manufacturing network</p>
         <h1 className="mt-1.5 text-2xl font-bold tracking-tight">Facilities</h1>
-        <p className="mt-1 max-w-3xl text-sm leading-6 text-muted-foreground">Monitor sites, production structure, performance, compliance, and operational access from one workspace.</p>
+        <p className="mt-1 max-w-3xl text-sm leading-6 text-muted-foreground">{canViewAllPlants(currentUserScope) ? "Monitor all sites, production structure, performance, compliance, and operational access from one workspace." : "Monitor the production structure, performance, and compliance for your assigned plant."}</p>
       </header>
 
       <section className="space-y-3" aria-labelledby="facilities-compliance-title">

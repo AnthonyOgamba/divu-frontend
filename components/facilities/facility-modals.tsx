@@ -47,7 +47,7 @@ export function GrantAccessModal({ facilities, onClose, onSave }: { facilities: 
   const [accessLevel, setAccessLevel] = useState<AccessLevel>("View");
   const [expiresAt, setExpiresAt] = useState("");
   const facility = facilities.find((item) => item.id === facilityId);
-  const halls = facility?.halls ?? [];
+  const halls = useMemo(() => facility?.halls ?? [], [facility]);
   const lines = useMemo(() => halls.find((hall) => hall.id === hallId)?.lines ?? [], [halls, hallId]);
   const stations = useMemo(() => lines.find((line) => line.id === lineId)?.stations ?? [], [lines, lineId]);
   function submit(event: FormEvent) { event.preventDefault(); const staffMember = staffMembers.find((member) => member.id === userId); if (!staffMember) return; const hall = halls.find((item) => item.id === hallId); const line = lines.find((item) => item.id === lineId); const station = stations.find((item) => item.id === stationId); onSave({ id: `access-${Date.now()}`, userId: staffMember.id, userName: staffMember.name, platformRole: staffMember.role, operationalRole: accessLevel === "Admin" ? "Site Administrator" : `${accessLevel} Operator`, facilityId, hall: hall?.name ?? "All Halls", productionLine: line?.name ?? "All Lines", station: station?.name, accessLevel, effectiveDate: new Date().toISOString().slice(0, 10), expiryDate: expiresAt || undefined, status: "Active" }); }
