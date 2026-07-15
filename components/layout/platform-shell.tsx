@@ -31,6 +31,8 @@ import {
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { NotificationDrawer } from "@/components/notifications/notification-drawer";
+import { initialNotifications } from "@/components/notifications/notification-data";
 
 type NavigationItem = {
   label: string;
@@ -212,7 +214,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           </span>
           <span className="min-w-0 flex-1">
             <span className="block truncate text-[13px] font-semibold">Admin User</span>
-            <span className="block truncate text-[11px] text-muted-foreground">Administrator</span>
+            <span className="block truncate text-[11px] text-muted-foreground">Super Admin</span>
           </span>
           <ChevronDown className="size-4 text-muted-foreground" />
         </Link>
@@ -224,7 +226,10 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 export function PlatformShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [notifications, setNotifications] = useState(initialNotifications);
   const pageTitle = pageTitles.get(pathname) ?? "DIVU Analytics";
+  const unreadCount = notifications.filter((item) => !item.read).length;
 
   return (
     <div className="flex h-dvh min-h-[36rem] overflow-hidden bg-background">
@@ -277,11 +282,12 @@ export function PlatformShell({ children }: { children: React.ReactNode }) {
             <ThemeToggle />
             <button
               type="button"
+              onClick={() => setNotificationsOpen(true)}
               className="relative grid size-9 place-items-center rounded-lg border bg-card text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-              aria-label="Notifications"
+              aria-label={`Notifications, ${unreadCount} unread`}
             >
               <Bell className="size-4" />
-              <span className="absolute right-2 top-2 size-1.5 rounded-full bg-destructive" />
+              {unreadCount > 0 && <span className="absolute -right-1.5 -top-1.5 grid h-5 min-w-5 place-items-center rounded-full border-2 border-[var(--dv-header)] bg-primary px-1 font-mono text-[10px] font-bold leading-none text-primary-foreground shadow-sm">{unreadCount}</span>}
             </button>
             <Link
               href="/profile"
@@ -297,6 +303,7 @@ export function PlatformShell({ children }: { children: React.ReactNode }) {
           <div className="mx-auto w-full max-w-[96rem]">{children}</div>
         </main>
       </div>
+      <NotificationDrawer open={notificationsOpen} notifications={notifications} onClose={() => setNotificationsOpen(false)} onChange={setNotifications} />
     </div>
   );
 }

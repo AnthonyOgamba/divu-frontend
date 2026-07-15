@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Bell, ChevronRight, FileSearch, KeyRound, LockKeyhole, Search, ShieldAlert, ShieldCheck, TrendingUp, UserRoundX, X } from "lucide-react";
+import { AlertTriangle, Bell, ChevronRight, FileSearch, KeyRound, LockKeyhole, Search, ShieldAlert, ShieldCheck, UserRoundX, X } from "lucide-react";
 import { investigations, metrics, notifications, securityEvents, type Investigation, type SecurityEvent, type SecurityStatus, type Severity } from "./security-operations-data";
 import { SecuritySeverityBadge, SecurityStatusBadge } from "./security-badges";
 
