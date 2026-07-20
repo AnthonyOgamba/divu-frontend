@@ -5,17 +5,13 @@ import * as React from "react";
 // Minimal dialog implementation (no external deps) to support Activity page modals.
 // This is intentionally lightweight and theme-friendly.
 
-export function Dialog({
-  open,
-  onOpenChange,
-  children,
-}: {
+export function Dialog(props: {
   open: boolean;
   onOpenChange: (next: boolean) => void;
   children: React.ReactNode;
 }) {
   // The minimal Dialog renders its children only when open=true.
-  return <>{open ? children : null}</>;
+  return <>{props.open ? props.children : null}</>;
 }
 
 // Keep compatibility with code that uses Dialog.Root

@@ -11,6 +11,7 @@ export type GovernanceStatus =
   | "Active"
   | "Draft"
   | "Under Review"
+  | "Archived"
   | "Compliant"
   | "Non-Compliant"
   | "Review Required"
@@ -43,28 +44,39 @@ export type Dataset = {
 export type GovernancePolicy = {
   id: string;
   name: string;
+  owner: string;
   description: string;
   appliesTo: string;
-  retention: string;
+  status: "Draft" | "Active" | "Under Review" | "Archived";
+  retentionPeriod: string;
+  reviewFrequency: string;
   archiveRule: string;
   deletionRule: string;
-  review: string;
-  owner: string;
-  updated: string;
-  encrypted: boolean;
-  status: GovernanceStatus;
+  piiHandling: string;
+  encryptionRequired: boolean;
+  classification: ClassificationLevel | "";
+  riskLevel: "Low" | "Medium" | "High" | "Critical" | "";
+  approvalRequired: boolean;
+  complianceStandard: string;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type ComplianceControl = {
   id: string;
   name: string;
   category: string;
-  description: string;
+  status: "Active" | "Monitoring" | "Review Required";
+  riskLevel: "Low" | "Medium" | "High" | "Critical";
   owner: string;
-  framework: string;
   lastChecked: string;
+  nextReview: string;
+  complianceStandard: string;
+  description: string;
   evidence: string;
-  status: GovernanceStatus;
+  recommendedAction: string;
+  relatedModules: string[];
 };
 
 export type GovernanceAlert = {
@@ -189,7 +201,7 @@ export const datasets: Dataset[] = [
   },
 ];
 
-export const governancePolicies: GovernancePolicy[] = [
+export const legacyGovernancePolicies = [
   { id: "POL-001", name: "Sensor Telemetry Retention", description: "Retention and archival rules for industrial telemetry streams.", appliesTo: "Sensor Data", retention: "7 Years", archiveRule: "Archive after 90 days to cold storage", deletionRule: "Auto-delete after 7 years with audit log", review: "Annual", owner: "Data Engineering", updated: "2026-06-15", encrypted: true, status: "Active" },
   { id: "POL-002", name: "Financial Records Compliance", description: "SOX and privacy controls for financial records.", appliesTo: "Financial Data", retention: "10 Years", archiveRule: "Archive after 1 year", deletionRule: "Manual deletion with CFO approval", review: "Semi-Annual", owner: "Finance & Legal", updated: "2026-05-30", encrypted: true, status: "Active" },
   { id: "POL-003", name: "User PII Data Policy", description: "Handling, pseudonymisation, and erasure requirements for identities.", appliesTo: "User Accounts", retention: "3 Years post-deletion", archiveRule: "No archival — delete on request", deletionRule: "Right-to-erasure within 30 days", review: "Quarterly", owner: "Privacy Office", updated: "2026-07-01", encrypted: true, status: "Under Review" },
@@ -197,7 +209,7 @@ export const governancePolicies: GovernancePolicy[] = [
   { id: "POL-005", name: "API Access Audit Trail", description: "Audit, masking, and retention requirements for API gateway logs.", appliesTo: "API Logs", retention: "2 Years", archiveRule: "Archive after 60 days to SIEM", deletionRule: "Auto-delete after 2 years", review: "Quarterly", owner: "Security", updated: "2026-07-10", encrypted: true, status: "Draft" },
 ];
 
-export const complianceControls: ComplianceControl[] = [
+export const legacyComplianceControls = [
   { id: "CC-01", name: "Data Encryption at Rest", category: "Security", description: "Restricted and confidential datasets use AES-256 encryption.", owner: "Security Operations", framework: "SOC 2 CC6.1", lastChecked: "2026-07-13", evidence: "42 artifacts", status: "Passing" },
   { id: "CC-02", name: "Access Control Reviews", category: "Access", description: "Quarterly review of dataset permissions and role assignments.", owner: "IT Security", framework: "ISO 27001 A.9", lastChecked: "2026-07-12", evidence: "18 artifacts", status: "Passing" },
   { id: "CC-03", name: "PII Pseudonymisation", category: "Privacy", description: "PII is pseudonymised before use in analytics pipelines.", owner: "Privacy Office", framework: "GDPR Art.25", lastChecked: "2026-07-13", evidence: "7 artifacts", status: "Failing" },
