@@ -80,8 +80,6 @@ export function ActivityRequestCard({
 
   const latest = useMemo(() => getLatestDecision(request), [request]);
 
-  const canAct = request.status === "pending";
-
   function updateRequest(mutator: (prev: ActivityRequest) => ActivityRequest) {
     onChangeRequests(allRequests.map((r) => (r.id === request.id ? mutator(r) : r)));
   }

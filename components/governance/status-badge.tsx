@@ -4,6 +4,7 @@ import type { ClassificationLevel, GovernanceStatus } from "./governance-data";
 
 const statusClasses: Record<GovernanceStatus, string> = {
   Active: "bg-[var(--dv-badge-ok-bg)] text-[var(--dv-badge-ok-text)]",
+  Archived: "bg-muted text-muted-foreground",
   Compliant: "bg-[var(--dv-badge-ok-bg)] text-[var(--dv-badge-ok-text)]",
   Passing: "bg-[var(--dv-badge-ok-bg)] text-[var(--dv-badge-ok-text)]",
   Healthy: "bg-[var(--dv-badge-ok-bg)] text-[var(--dv-badge-ok-text)]",

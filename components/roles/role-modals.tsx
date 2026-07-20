@@ -115,7 +115,8 @@ export function CreateRoleModal({ onClose }: { onClose: () => void }) {
   function toggle(key: string) {
     setGranted((current) => {
       const next = new Set(current);
-      next.has(key) ? next.delete(key) : next.add(key);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
       return next;
     });
   }

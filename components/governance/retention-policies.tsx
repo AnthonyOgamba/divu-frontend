@@ -1,6 +1,7 @@
-import { Clock3, FileText, Pencil } from "lucide-react";
+import { Clock3, FileText } from "lucide-react";
 
-import { datasets, governancePolicies } from "./governance-data";
+import { datasets } from "./governance-data";
+import { governancePolicies } from "./policy-data";
 import { GovernanceCard } from "./governance-card";
 import { ClassificationBadge, StatusBadge } from "./status-badge";
 
@@ -24,18 +25,15 @@ export function RetentionPolicies() {
               </div>
               <div className="flex items-center gap-3">
                 <StatusBadge status={policy.status} />
-                <button type="button" aria-label={`Edit ${policy.name}`} className="grid size-8 place-items-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground">
-                  <Pencil className="size-4" />
-                </button>
               </div>
             </div>
 
             <div className="grid border-y bg-muted/20 sm:grid-cols-2 xl:grid-cols-4">
               {[
-                ["Retention period", policy.retention],
+                ["Retention period", policy.retentionPeriod],
                 ["Archive rule", policy.archiveRule],
                 ["Deletion rule", policy.deletionRule],
-                ["Review cycle", policy.review],
+                ["Review cycle", policy.reviewFrequency],
               ].map(([label, value]) => (
                 <div key={label} className="border-b px-5 py-4 last:border-b-0 sm:odd:border-r xl:border-b-0 xl:not-last:border-r">
                   <p className="font-mono text-[9px] uppercase tracking-[0.1em] text-muted-foreground">{label}</p>

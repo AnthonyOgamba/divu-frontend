@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { X } from "lucide-react";
 import type { Department } from "./departments-data";
 
@@ -15,14 +15,21 @@ export function CreateDepartmentModal({
   onClose: () => void;
   onCreate: (payload: { name: string; description?: string }) => void;
 }) {
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState<string>("");
+  if (!open) return null;
+  return <DepartmentDialog initial={initial} onClose={onClose} onCreate={onCreate} />;
+}
 
-  useEffect(() => {
-    if (!open) return;
-    setName(initial?.name ?? "");
-    setDescription(initial?.description ?? "");
-  }, [initial, open]);
+function DepartmentDialog({
+  initial,
+  onClose,
+  onCreate,
+}: {
+  initial?: Pick<Department, "name" | "description">;
+  onClose: () => void;
+  onCreate: (payload: { name: string; description?: string }) => void;
+}) {
+  const [name, setName] = useState(initial?.name ?? "");
+  const [description, setDescription] = useState(initial?.description ?? "");
 
   function submit(e: FormEvent) {
     e.preventDefault();
@@ -35,8 +42,6 @@ export function CreateDepartmentModal({
     });
     onClose();
   }
-
-  if (!open) return null;
 
   return (
     <div

@@ -11,6 +11,7 @@ export type GovernanceStatus =
   | "Active"
   | "Draft"
   | "Under Review"
+  | "Archived"
   | "Compliant"
   | "Non-Compliant"
   | "Review Required"
@@ -37,34 +38,47 @@ export type Dataset = {
   status: GovernanceStatus;
   encrypted: boolean;
   pii: boolean;
+  lastReviewed: string;
+  lastReviewedBy: string;
   nextReview: string;
 };
 
 export type GovernancePolicy = {
   id: string;
   name: string;
+  owner: string;
   description: string;
   appliesTo: string;
-  retention: string;
+  status: "Draft" | "Active" | "Under Review" | "Archived";
+  retentionPeriod: string;
+  reviewFrequency: string;
   archiveRule: string;
   deletionRule: string;
-  review: string;
-  owner: string;
-  updated: string;
-  encrypted: boolean;
-  status: GovernanceStatus;
+  piiHandling: string;
+  encryptionRequired: boolean;
+  classification: ClassificationLevel | "";
+  riskLevel: "Low" | "Medium" | "High" | "Critical" | "";
+  approvalRequired: boolean;
+  complianceStandard: string;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type ComplianceControl = {
   id: string;
   name: string;
   category: string;
-  description: string;
+  status: "Active" | "Monitoring" | "Review Required";
+  riskLevel: "Low" | "Medium" | "High" | "Critical";
   owner: string;
-  framework: string;
   lastChecked: string;
+  nextReview: string;
+  complianceStandard: string;
+  description: string;
   evidence: string;
-  status: GovernanceStatus;
+  recommendedAction: string;
+  relatedModules: string[];
 };
 
 export type GovernanceAlert = {
@@ -99,12 +113,14 @@ export const datasets: Dataset[] = [
     department: "Engineering",
     owner: "J. Hartley",
     technicalOwner: "M. Okonkwo",
-    steward: "Data Engineering",
+    steward: "M. Okonkwo",
     volume: "4.2M / month",
     policy: "Sensor Telemetry Retention",
     status: "Non-Compliant",
     encrypted: true,
     pii: false,
+    lastReviewed: "2026-05-01",
+    lastReviewedBy: "Admin User",
     nextReview: "2026-08-01",
   },
   {
@@ -115,12 +131,14 @@ export const datasets: Dataset[] = [
     department: "Finance",
     owner: "C. Adeyemi",
     technicalOwner: "R. Patel",
-    steward: "Finance Data Team",
+    steward: "R. Patel",
     volume: "850K / year",
     policy: "Financial Records Compliance",
     status: "Compliant",
     encrypted: true,
     pii: false,
+    lastReviewed: "2026-05-15",
+    lastReviewedBy: "Admin User",
     nextReview: "2026-11-15",
   },
   {
@@ -131,12 +149,14 @@ export const datasets: Dataset[] = [
     department: "IT",
     owner: "L. Nwosu",
     technicalOwner: "A. Petrov",
-    steward: "IT Security",
+    steward: "A. Petrov",
     volume: "12,400 users",
     policy: "User PII Data Policy",
     status: "Review Required",
     encrypted: true,
     pii: true,
+    lastReviewed: "2026-06-01",
+    lastReviewedBy: "Admin User",
     nextReview: "2026-09-01",
   },
   {
@@ -147,12 +167,14 @@ export const datasets: Dataset[] = [
     department: "Operations",
     owner: "P. Mensah",
     technicalOwner: "D. Kovacs",
-    steward: "Operations Team",
+    steward: "D. Kovacs",
     volume: "22M / day",
     policy: "Operations Log Archive",
     status: "Compliant",
     encrypted: false,
     pii: false,
+    lastReviewed: "2026-06-10",
+    lastReviewedBy: "Admin User",
     nextReview: "2026-09-10",
   },
   {
@@ -163,33 +185,37 @@ export const datasets: Dataset[] = [
     department: "Marketing",
     owner: "T. Osei",
     technicalOwner: "S. Kim",
-    steward: "Marketing Data",
+    steward: "S. Kim",
     volume: "3,200 products",
     policy: "Public Data Standard",
     status: "Compliant",
     encrypted: false,
     pii: false,
+    lastReviewed: "2026-07-01",
+    lastReviewedBy: "Admin User",
     nextReview: "2026-10-01",
   },
   {
     id: "DS-006",
     name: "API Access Logs",
     description: "Gateway audit trail for platform and partner API calls.",
-    classification: "Internal",
+    classification: "Restricted",
     department: "Security",
     owner: "K. Adebayo",
     technicalOwner: "F. Tanaka",
-    steward: "Security Operations",
+    steward: "F. Tanaka",
     volume: "180M / month",
     policy: "API Access Audit Trail",
     status: "Compliant",
     encrypted: true,
     pii: false,
+    lastReviewed: "2026-07-05",
+    lastReviewedBy: "Admin User",
     nextReview: "2026-10-05",
   },
 ];
 
-export const governancePolicies: GovernancePolicy[] = [
+export const legacyGovernancePolicies = [
   { id: "POL-001", name: "Sensor Telemetry Retention", description: "Retention and archival rules for industrial telemetry streams.", appliesTo: "Sensor Data", retention: "7 Years", archiveRule: "Archive after 90 days to cold storage", deletionRule: "Auto-delete after 7 years with audit log", review: "Annual", owner: "Data Engineering", updated: "2026-06-15", encrypted: true, status: "Active" },
   { id: "POL-002", name: "Financial Records Compliance", description: "SOX and privacy controls for financial records.", appliesTo: "Financial Data", retention: "10 Years", archiveRule: "Archive after 1 year", deletionRule: "Manual deletion with CFO approval", review: "Semi-Annual", owner: "Finance & Legal", updated: "2026-05-30", encrypted: true, status: "Active" },
   { id: "POL-003", name: "User PII Data Policy", description: "Handling, pseudonymisation, and erasure requirements for identities.", appliesTo: "User Accounts", retention: "3 Years post-deletion", archiveRule: "No archival — delete on request", deletionRule: "Right-to-erasure within 30 days", review: "Quarterly", owner: "Privacy Office", updated: "2026-07-01", encrypted: true, status: "Under Review" },
@@ -197,7 +223,7 @@ export const governancePolicies: GovernancePolicy[] = [
   { id: "POL-005", name: "API Access Audit Trail", description: "Audit, masking, and retention requirements for API gateway logs.", appliesTo: "API Logs", retention: "2 Years", archiveRule: "Archive after 60 days to SIEM", deletionRule: "Auto-delete after 2 years", review: "Quarterly", owner: "Security", updated: "2026-07-10", encrypted: true, status: "Draft" },
 ];
 
-export const complianceControls: ComplianceControl[] = [
+export const legacyComplianceControls = [
   { id: "CC-01", name: "Data Encryption at Rest", category: "Security", description: "Restricted and confidential datasets use AES-256 encryption.", owner: "Security Operations", framework: "SOC 2 CC6.1", lastChecked: "2026-07-13", evidence: "42 artifacts", status: "Passing" },
   { id: "CC-02", name: "Access Control Reviews", category: "Access", description: "Quarterly review of dataset permissions and role assignments.", owner: "IT Security", framework: "ISO 27001 A.9", lastChecked: "2026-07-12", evidence: "18 artifacts", status: "Passing" },
   { id: "CC-03", name: "PII Pseudonymisation", category: "Privacy", description: "PII is pseudonymised before use in analytics pipelines.", owner: "Privacy Office", framework: "GDPR Art.25", lastChecked: "2026-07-13", evidence: "7 artifacts", status: "Failing" },
