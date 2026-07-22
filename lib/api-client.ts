@@ -19,13 +19,18 @@ export async function apiRequest<T>(url: string, init: RequestInit = {}): Promis
     if (response.status === 204) return undefined as T;
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-      const message =
-        data.error ||
-        (response.status === 404
-          ? "The requested service is not available."
-          : response.status >= 500
-            ? "The server could not complete the request."
-            : "The request could not be completed.");
+      const fallback = response.status === 403
+        ? "You do not have permission to perform this action."
+        : response.status === 404
+          ? "This feature or resource is unavailable."
+          : response.status === 409
+            ? "The action conflicts with the current resource state."
+            : response.status === 503
+              ? "Olive is temporarily unavailable. Please try again shortly."
+              : response.status >= 500
+                ? "The server could not complete the request."
+                : "The request could not be completed.";
+      const message = typeof data.error === "string" && !data.error.trimStart().startsWith("<") ? data.error : fallback;
       if (response.status === 401 && url !== "/api/auth/login") {
         window.dispatchEvent(new Event("divu-session-expired"));
         window.location.assign("/login?reason=session-expired");

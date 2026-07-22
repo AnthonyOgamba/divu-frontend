@@ -4,7 +4,6 @@ import { NextResponse } from "next/server";
 import { AUTH_COOKIE } from "@/lib/auth/constants";
 
 const DEVELOPMENT_BACKEND_URL = "http://localhost:8080";
-const DEVELOPMENT_AI_AGENT_URL = "http://localhost:8000";
 const REQUEST_TIMEOUT_MS = 10_000;
 
 export function backendBaseUrl() {
@@ -19,22 +18,6 @@ export function backendUrl(path: string) {
   return `${backendBaseUrl()}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
-export function aiAgentBaseUrl() {
-  const configured = process.env.AI_AGENT_API_URL?.trim();
-  if (!configured && process.env.NODE_ENV === "production") {
-    throw new Error("AI_AGENT_API_URL is required in production.");
-  }
-  return (configured || DEVELOPMENT_AI_AGENT_URL).replace(/\/+$/, "");
-}
-
-export function aiAgentUrl(path: string) {
-  return `${aiAgentBaseUrl()}${path.startsWith("/") ? path : `/${path}`}`;
-}
-
-function upstreamUrl(path: string) {
-  return path.startsWith("/api/ai/") ? aiAgentUrl(path) : backendUrl(path);
-}
-
 export type BackendResult<T> = {
   response: Response;
   body: T | null;
@@ -44,8 +27,9 @@ export async function readBackendBody<T>(response: Response): Promise<T | null> 
   if (response.status === 204) return null;
   const contentType = response.headers.get("content-type") || "";
   if (contentType.includes("application/json")) return response.json().catch(() => null) as Promise<T | null>;
-  const text = await response.text().catch(() => "");
-  return (text ? ({ error: text } as T) : null);
+  // Upstream HTML (for example, an nginx 404 page) is never exposed to the browser.
+  await response.text().catch(() => "");
+  return null;
 }
 
 export function backendError(body: unknown, fallback: string) {
@@ -69,7 +53,7 @@ export async function requestBackend<T>(
   const headers = new Headers();
   if (options.token) headers.set("Authorization", `Bearer ${options.token}`);
   if (options.body !== undefined) headers.set("Content-Type", "application/json");
-  const response = await fetch(upstreamUrl(path), {
+  const response = await fetch(backendUrl(path), {
     method: options.method || "GET",
     headers,
     body: options.body,
@@ -93,10 +77,13 @@ export function publicBackendResponse(body: unknown, status: number) {
     if (body === null) return NextResponse.json({ error: "The backend returned an invalid response." }, { status: 502 });
     return NextResponse.json(body, { status });
   }
-  return NextResponse.json(
-    { error: backendError(body, status === 401 ? "Your session has expired." : "The backend could not complete the request.") },
-    { status },
-  );
+  const fallback = status === 401 ? "Your session has expired."
+    : status === 403 ? "You do not have permission to perform this action."
+      : status === 404 ? "This Olive feature or resource is unavailable."
+        : status === 409 ? "The requested action conflicts with the current resource state."
+          : status === 503 ? "Olive is temporarily unavailable. Please try again shortly."
+            : "The backend could not complete the request.";
+  return NextResponse.json({ error: backendError(body, fallback) }, { status });
 }
 
 export function expireAuthentication(response: NextResponse) {

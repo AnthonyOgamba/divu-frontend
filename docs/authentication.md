@@ -12,11 +12,9 @@ Set these server environment values in `.env.local`:
 
 ```dotenv
 BACKEND_API_URL=http://localhost:8080
-NEXT_PUBLIC_API_URL=http://localhost:8080
-AI_AGENT_API_URL=http://localhost:8000
 ```
 
-`BACKEND_API_URL` is used for authentication and core platform APIs. `AI_AGENT_API_URL` is used for `/api/ai/*`, including Olive chat, alerts, rules, predictions, data generation, settings, and live events. Production fails configuration when the required upstream value is missing. Public URL variables document the upstream origins, but authenticated browser code must call the same-origin BFF routes rather than either service directly.
+`BACKEND_API_URL` is the only upstream origin used by the frontend BFF. It handles authentication, core platform APIs, and `/api/ai/*`, including Olive chat, alerts, rules, predictions, data generation, settings, readiness, and live events. Production fails configuration when it is missing. Browser code calls authenticated same-origin BFF routes and never receives the upstream URL or access token.
 
 Run the backend gateway separately, then run the frontend:
 
@@ -38,7 +36,7 @@ The browser submits `POST /api/auth/login` with `{ "username", "password" }`. Th
 
 The response exposed to browser JavaScript contains only `username`, `role`, and `uid`; it never contains the token. No access token is stored in localStorage or sessionStorage.
 
-Protected pages are checked against a protected gateway endpoint. This is temporary validation until the backend supplies `GET /api/auth/me`. Claims are used only for minimum display identity after the backend has accepted the token; decoding alone is not authentication.
+Protected pages are checked against a protected gateway endpoint. The published contract lists `GET /api/auth/me`, but the production gateway still returns 404 for that route, so dashboard validation remains the temporary compatibility check. Claims are used only for minimum display identity after the backend has accepted the token; decoding alone is not authentication.
 
 `POST /api/auth/logout` deletes the cookie and returns HTTP 204. There is currently no backend logout endpoint.
 
@@ -71,7 +69,7 @@ The server helper applies a ten-second timeout, safely parses JSON and text erro
 
 The centralized `lib/backend-capabilities.ts` flags users, roles, departments, assets, governance, approvals, notifications, reports, financial analytics, security operations, API clients, data sources, profile, and settings as unavailable. Those screens retain the established visual demonstrations and display an explicit demonstration-data notice. They do not call nonexistent APIs. AI actions remain disabled because the current port-9000 services bypass gateway authentication.
 
-The current backend also lacks refresh tokens, session revocation/logout, `GET /api/auth/me`, and password-reset completion. The gateway must eventually supply these features; they must not be recreated as frontend persistence.
+The current backend still lacks refresh tokens, session revocation/logout, and a live production `GET /api/auth/me`. Those features must not be recreated as frontend persistence.
 
 ## Olive
 
