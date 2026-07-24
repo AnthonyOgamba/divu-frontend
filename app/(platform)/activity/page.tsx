@@ -1,7 +1,7 @@
-import ActivityPage from "@/components/activity/ActivityPage";
+import { AggregatePage } from "@/components/dashboard/aggregate-page";
 
 export default function ActivityRoute() {
-  return <ActivityPage />;
+  return <AggregatePage kind="activity" />;
 }
 
 

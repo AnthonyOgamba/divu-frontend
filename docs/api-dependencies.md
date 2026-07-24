@@ -1,56 +1,54 @@
 # Frontend API dependency map
 
-Status values:
+Source of truth: backend `docs/frontend-integration-contract.md`, implementation commit `ed28834232889268fb6082585e3ef6ef293dcea9`.
 
-1. **confirmed and available** — present in the published contract and/or observed on the production gateway.
-2. **confirmed but pending deployment** — backend work is known but no production contract is available.
-3. **missing** — no endpoint is published.
-4. **ambiguous** — a related endpoint exists, but it does not prove the required page contract.
+The backend is complete locally but not deployed to Azure. All confirmed routes below are therefore also **blocked pending Azure deployment** for production. Local development uses server-only `BACKEND_API_URL=http://localhost:8080`; browser code uses `/api/backend/*`.
 
-All browser requests use `/api/backend/*`. `BACKEND_API_URL` is server-only. No browser module calls an Azure Container App directly.
+| Page/module | Confirmed route | Integration status | Contract notes |
+|---|---|---|---|
+| Login | `POST auth/login` | Confirmed and integrated | JWT remains in the HttpOnly cookie |
+| Current user | `GET auth/me` | Confirmed and integrated | Flat `uid`, `username`, `email`, `role`, `capabilities`, `facilityIds`, `mustChangePassword` |
+| Forgot password | `POST auth/forgot-password` | Confirmed and integrated | Acknowledgement only |
+| Profile | `GET/PATCH profile` | Confirmed and integrated | Preferences are separate from `/auth/me`; password requires current password and 12+ characters |
+| Organization settings | `GET/PATCH settings/organization` | Confirmed and integrated | PATCH writes one key/category/value |
+| Users | `GET/POST users` | Confirmed and integrated | Temporary password shown once |
+| Invitations | `POST users/{id}/invitation` | Confirmed and integrated | Generation/copy only; redemption is missing |
+| Roles | `GET roles` | Confirmed and integrated | Read-only; mutation routes are missing |
+| Site access | `GET/POST site-access` | Confirmed and integrated | One facility/access-level assignment |
+| Dashboard | `GET dashboard` | Confirmed and integrated | No public filters; decimals converted to percentages; legacy analytics removed |
+| Facilities | `GET facilities/workspace` | Confirmed and integrated | One initial aggregate request; optional `aiInsights` never blocks hierarchy |
+| Hierarchy creation | `POST facilities`, `POST facilities/{id}/halls`, `POST halls/{id}/lines`, `POST lines/{id}/stations` | Confirmed and integrated | Used only for user create actions |
+| Assets | `GET facilities/workspace`, `GET lines/{id}/stations`, `GET runs/stations` | Confirmed and partially integrated | Stations are the implemented machine resource; no asset CRUD route |
+| Sensor inventory | `GET sensors/streams`, `GET sensors/streams/{id}/sensors` | Confirmed and integrated | Telemetry reads are not facility-filtered |
+| Sensor mutations/readings | stream/sensor POST/PUT, readings POST, run readings GET | Confirmed but not yet integrated | BFF allowlisted; UI mutation forms remain to be connected |
+| Runs | list/create/active/stations and lifecycle PATCH routes | Confirmed but not yet integrated | Existing page does not expose the complete run workflow |
+| Products | products CRUD | Confirmed but not yet integrated | Production master data, never physical assets |
+| Reports export | `GET reports/export.xlsx` | Confirmed and integrated | Binary body, MIME, disposition and filename preserved |
+| Reports JSON | none | Missing backend route | On-screen report datasets explicitly unavailable |
+| Audit | `GET audit` | Confirmed and integrated | Latest 100 only; no server pagination |
+| Downtime | Dashboard `downtimeTrend` | Confirmed and integrated for summary | Detailed downtime API is missing |
+| Financial | Dashboard `financialImpact` | Confirmed and integrated for summary | Detailed financial API is missing |
+| Security Operations | Dashboard `securitySummary`, `recentAlerts` | Confirmed and integrated for summary | Security events/actions API is missing |
+| Activity | Dashboard `recentActivity`; Audit separately | Confirmed and integrated for summary | Standalone activity API is missing |
+| Olive | health, ready, chat, risks, alerts, notifications, rules, settings, scan, generators | Confirmed and integrated | Explicit snake_case DTOs |
+| Olive SSE | `GET ai/events` | Confirmed and integrated | Fetch stream, Last-Event-ID, named events, bounded exponential reconnect, cancellation and duplicate protection |
+| Data Governance | none | Missing backend route | Explicit unavailable-contract state |
+| Data Input/imports | none | Missing backend route | Explicit unavailable-contract state |
 
-| Frontend page/module | Current request | Required dependency | Status | Loading/error behavior | Mock data |
-|---|---|---|---:|---|---|
-| Login/session | `/api/auth/login`, dashboard validation | `/api/auth/me` with permissions and assignments | 2 | Form errors; existing session flow retained until verified | Display identity fallback |
-| Dashboard summary | `/api/backend/dashboard` | Aggregate production summary | 1 | Summary independent from analytics | No primary mock |
-| Dashboard analytics | `/api/backend/runs/analytics` | Production trend | 1 | Independent widget error/retry | No primary mock |
-| Dashboard optional widgets | none | OEE, downtime, finance, sensor health, security, alerts/activity aggregates | 2/4 | Explicit pending empty states | Historical dashboard display data remains unused |
-| Facilities list | `/api/backend/facilities` | Aggregate workspace endpoint | 2 | First request loads shallow cards; existing data retained | Legacy facility seed file remains for other pages |
-| Facilities hierarchy/performance | existing hierarchy endpoints, loaded lazily | Aggregate detail endpoint | 4 | Per-tab skeleton/error; in-memory cache | No fallback data in active Facilities page |
-| Facilities access | `/api/backend/site-access` | Access list/create | 1 | Loaded only when Access tab opens | None in active page |
-| Facilities insights | `/api/backend/ai/assets/failure-probabilities` | Station risk | 1 | Optional section error does not blank hierarchy | None |
-| Olive readiness | `/api/backend/ai/ready` | AI readiness | 1 | Dedicated readiness gate | None |
-| Olive chat | `/api/backend/ai/chat` | Chat | 1 | Abort, 45s timeout, elapsed time, failed-request retry | Suggested questions only |
-| Olive risk/alerts/notifications/rules/settings | matching `/api/backend/ai/*` routes | Published Olive OpenAPI | 1 | Each tab mounts and fetches independently | None |
-| Olive generators | `/api/backend/ai/data-generators*` | Published generator contract | 1 | SSE with 30s disconnected fallback poll | None |
-| Sensors streams | `/api/backend/sensors/streams*` | Stream/sensor inventory | 1 | Independent stream/detail state | Main sensor cards still seeded |
-| Sensors live readings | none | Incremental reading/SSE contract | 4 | Pending | Yes |
-| Assets | none | Asset CRUD, station assignment, telemetry, maintenance | 3 | Demonstration UI | Yes |
-| Downtime | none | Events, reasons, duration, cost, trend | 3 | Demonstration UI | Yes |
-| Audit | `/api/backend/audit` | Audit list | 1 | Page-specific | Legacy presentation data remains |
-| Reports | none | Query/report/export `.xlsx` | 3 | Demonstration UI | Yes; frontend mock download must not be called production integration |
-| Financial | none | Cost/loss/maintenance/avoided-cost aggregates | 3 | Demonstration UI | Yes |
-| Security Operations/API Security | none | Security events, failures, integrity incidents, clients | 3 | Demonstration UI | Yes |
-| Activity | none | Combined user and operational activity | 3 | Demonstration UI | Yes |
-| Users/Roles/Invitations | none | CRUD, capabilities, assignments, invitation lifecycle | 2 | Demonstration UI | Yes |
-| Settings/Profile | `/api/auth/session` only | Personal/org settings and full profile | 2 | Existing local state | Yes |
-| Notifications drawer | `/api/backend/ai/notifications` plus local workflow data | Unified notification contract | 4 | AI errors isolated | Partial |
-| Governance/Data Input | none | Governance/import/batch contracts | 3 | Demonstration UI | Yes |
+## Backend inconsistencies
 
-## Static/mock dependencies still present
+- Capabilities drive frontend visibility, while backend enforcement mostly uses role lists.
+- `maintenance_technician` is accepted by some Telemetry/run-failure controllers but cannot be created through `/users`.
+- `/users` returns persisted `UserRole`; `/auth/me` and `/profile` return the effective current-user role.
+- Telemetry reads and several legacy analytics routes are not facility-filtered.
+- Olive alerts, notifications, rules, settings and generator reads are not facility-filtered; Station Risk is assignment-scoped.
+- Some Olive mutations/read routes enforce less than their nominal capability. The frontend still hides controls by capability, but the backend remains authoritative.
+- Public `/dashboard` accepts no date or facility filters.
 
-- `components/assets/assets-data.ts`
-- `components/sensors/sensors-data.ts`
-- `components/downtime/downtime-data.ts`
-- `components/reports/report-data.tsx`
-- `components/users/users-data.ts`
-- `components/roles/roles-data.ts`
-- `components/activity/activity-data.ts`
-- `components/financial/financial-data.ts`
-- `components/security-operations/security-operations-data.ts`
-- `components/governance/*-data.ts`
-- `components/data-input/data-input-data.ts`
-- `components/profile/profile-page.tsx` local initial profile
-- `lib/platform-workflow-store.ts` seeded notifications/activity
+## Missing APIs
 
-These dependencies are identified, not silently replaced with guessed requests. Typed placeholders live in `lib/pending-backend-contracts.ts`; they contain no endpoint paths.
+Asset CRUD, standalone downtime, detailed financial records, standalone security events, standalone activity, reports JSON, governance, imports, generation-batch history, invitation redemption, password-reset redemption, active sessions, token refresh/revocation, user update/delete, and role/permission mutations.
+
+## Mock-data disposition
+
+Mock-backed components and data files remain in the repository only where other inactive presentation modules import them. Active routes for Dashboard, Facilities, Assets, Reports, Financial, Downtime, Security Operations, Activity, Profile, Settings, Users, Roles and Sensors no longer use their previous mock page implementations. `lib/platform-workflow-store.ts` still seeds the global notification drawer; a unified notification contract is ambiguous because Olive notifications do not cover local approval workflows.

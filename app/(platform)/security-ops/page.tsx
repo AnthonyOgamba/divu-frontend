@@ -1,5 +1,5 @@
-import { SecurityOperationsPage as SecurityOperationsWorkspace } from "@/components/security-operations/security-operations-page";
+import { AggregatePage } from "@/components/dashboard/aggregate-page";
 
 export default function SecurityOperationsPage() {
-  return <SecurityOperationsWorkspace />;
+  return <AggregatePage kind="security" />;
 }

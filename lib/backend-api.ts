@@ -79,9 +79,10 @@ export function publicBackendResponse(body: unknown, status: number) {
   }
   const fallback = status === 401 ? "Your session has expired."
     : status === 403 ? "You do not have permission to perform this action."
-      : status === 404 ? "This Olive feature or resource is unavailable."
+      : status === 404 ? "This feature or resource is unavailable."
         : status === 409 ? "The requested action conflicts with the current resource state."
-          : status === 503 ? "Olive is temporarily unavailable. Please try again shortly."
+          : status === 503 ? "The requested backend service is temporarily unavailable."
+            : status === 504 ? "The backend request timed out. Please try again."
             : "The backend could not complete the request.";
   return NextResponse.json({ error: backendError(body, fallback) }, { status });
 }

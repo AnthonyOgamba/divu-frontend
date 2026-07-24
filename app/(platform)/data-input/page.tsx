@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { DataInputPage } from "@/components/data-input/data-input-page";
+import { BackendFeatureUnavailable } from "@/components/ui/backend-feature-unavailable";
 
 export const metadata: Metadata = {
   title: "Data Input | DIVU Analytics",
@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  return <DataInputPage />;
+  return <BackendFeatureUnavailable title="Data Input and imports" />;
 }

@@ -36,6 +36,8 @@ import { NotificationDrawer } from "@/components/notifications/notification-draw
 import { usePlatformWorkflowStore } from "@/lib/platform-workflow-store";
 import { apiRequest } from "@/lib/api-client";
 import { can, type Permission, type PermissionSession } from "@/lib/permissions";
+import type { CurrentUserDto } from "@/lib/backend-dtos";
+import { SectionError } from "@/components/ui/async-states";
 
 type NavigationItem = {
   label: string;
@@ -57,13 +59,6 @@ const navigation: NavigationGroup[] = [
     ],
   },
   {
-    label: "Data",
-    items: [
-      { label: "Data Input", href: "/data-input", icon: Database, permission: "data-input.manage" },
-      { label: "Data Governance", href: "/governance", icon: ShieldCheck, permission: "governance.view" },
-    ],
-  },
-  {
     label: "Operations",
     items: [
       { label: "Facilities", href: "/operations", icon: Settings2, permission: "facilities.view" },
@@ -82,9 +77,9 @@ const navigation: NavigationGroup[] = [
   {
     label: "Administration",
     items: [
-      { label: "Users", href: "/users", icon: Users, permission: "users.manage" },
-      { label: "Roles", href: "/roles", icon: ShieldUser, permission: "roles.manage" },
-      { label: "Activity", href: "/activity", icon: Activity, permission: "activity.view" },
+      { label: "Users", href: "/users", icon: Users, permission: "users.view" },
+      { label: "Roles", href: "/roles", icon: ShieldUser, permission: "roles.view" },
+      { label: "Activity", href: "/activity", icon: Activity, permission: "audit.view" },
     ],
   },
   {
@@ -104,6 +99,14 @@ const pageTitles = new Map(
 pageTitles.set("/settings", "Settings");
 pageTitles.set("/profile", "Profile");
 pageTitles.set("/api-security/logs", "API Audit Log");
+const routePermissions: Array<[string, Permission]> = [
+  ["/local-ai", "olive.use"], ["/security-ops", "security.view"], ["/api-security", "security.view"],
+  ["/audit", "audit.view"], ["/users", "users.view"], ["/roles", "roles.view"],
+  ["/reports", "reports.view"], ["/financial", "financial.view"], ["/downtime", "downtime.view"],
+  ["/sensors", "sensors.view"], ["/assets", "assets.view"], ["/operations", "facilities.view"],
+  ["/activity", "audit.view"], ["/settings", "settings.personal"], ["/profile", "settings.personal"],
+  ["/", "dashboard.view"],
+];
 
 function isActivePath(pathname: string, href: string) {
   return href === "/"
@@ -213,7 +216,7 @@ function SidebarContent({ onNavigate, session, username }: { onNavigate?: () => 
       </nav>
 
       <div className="shrink-0 border-t border-sidebar-border p-3">
-        <Link
+        {can(session, "settings.personal") && <Link
           href="/settings"
           onClick={onNavigate}
           className={cn(
@@ -225,9 +228,9 @@ function SidebarContent({ onNavigate, session, username }: { onNavigate?: () => 
         >
           <Settings className="size-4" />
           Settings
-        </Link>
+        </Link>}
 
-        <Link
+        {can(session, "settings.personal") && <Link
           href="/profile"
           onClick={onNavigate}
           className="flex items-center gap-3 rounded-lg border border-sidebar-border bg-background/60 p-3 transition-colors hover:bg-muted"
@@ -240,7 +243,7 @@ function SidebarContent({ onNavigate, session, username }: { onNavigate?: () => 
             <span className="block truncate text-[11px] text-muted-foreground">{session.role.replaceAll("_", " ")}</span>
           </span>
           <ChevronDown className="size-4 text-muted-foreground" />
-        </Link>
+        </Link>}
       </div>
     </div>
   );
@@ -251,6 +254,7 @@ export function PlatformShell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [session, setSession] = useState<PermissionSession>({ role: "viewer" });
+  const [sessionLoaded, setSessionLoaded] = useState(false);
   const [username, setUsername] = useState("");
   const notifications = usePlatformWorkflowStore((state) => state.notifications);
   const setNotifications = usePlatformWorkflowStore((state) => state.setNotifications);
@@ -264,9 +268,10 @@ export function PlatformShell({ children }: { children: React.ReactNode }) {
   }, []);
   useEffect(() => {
     let active = true;
-    apiRequest<{ user: { username: string; role: string; permissions?: string[] } }>("/api/auth/session")
-      .then((data) => { if (active) { setSession({ role: data.user.role, permissions: data.user.permissions }); setUsername(data.user.username); } })
-      .catch(() => undefined);
+    apiRequest<CurrentUserDto>("/api/auth/session")
+      .then((data) => { if (active) { setSession({ role: data.role, capabilities: data.capabilities }); setUsername(data.username); } })
+      .catch(() => undefined)
+      .finally(() => { if (active) setSessionLoaded(true); });
     return () => { active = false; };
   }, []);
 
@@ -339,7 +344,7 @@ export function PlatformShell({ children }: { children: React.ReactNode }) {
         </header>
 
         <main className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-          <div className="mx-auto w-full max-w-[96rem]">{children}</div>
+          <div className="mx-auto w-full max-w-[96rem]">{sessionLoaded && routePermissions.find(([path]) => isActivePath(pathname, path))?.[1] && !can(session, routePermissions.find(([path]) => isActivePath(pathname, path))![1]) ? <SectionError title="Insufficient permission" message="Your account does not have the capability required to view this page." /> : children}</div>
         </main>
       </div>
       <NotificationDrawer open={notificationsOpen} notifications={notifications} onClose={() => setNotificationsOpen(false)} onChange={setNotifications} />

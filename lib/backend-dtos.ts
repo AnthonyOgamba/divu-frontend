@@ -1,5 +1,33 @@
 export type LoginResponseDto = { token: string; username: string; role: string; uid: number };
 export type PublicSessionDto = { username: string; role: string; uid: number };
+export type CurrentUserDto = {
+  uid: number;
+  username: string;
+  email: string;
+  role: string;
+  capabilities: string[];
+  facilityIds: number[];
+  mustChangePassword: boolean;
+};
+export type ProfileDto = CurrentUserDto & {
+  displayName: string;
+  theme: string;
+  language: string;
+  timeZone: string;
+  notificationPreferences: Record<string, boolean>;
+  defaultFacilityId: number | null;
+  lastLoginAtUtc: string | null;
+};
+export type ProfileUpdateDto = Pick<ProfileDto, "displayName" | "email" | "theme" | "language" | "timeZone" | "notificationPreferences" | "defaultFacilityId"> & {
+  currentPassword: string | null;
+  newPassword: string | null;
+};
+export type OrganizationSettingDto = { key: string; value: unknown; category: string; updatedAtUtc?: string };
+export type UserDto = { uid: number; username: string; email: string; role: string; status: string; mustChangePassword: boolean; lastLoginAtUtc: string | null; createdAt: string };
+export type CreateUserDto = { username: string; email: string; role: string; facilityIds: number[] };
+export type CreatedUserDto = CreateUserDto & { uid: number; temporaryPassword: string; mustChangePassword: true };
+export type InvitationDto = { invitationUrl: string; expiresAtUtc: string };
+export type RoleDto = { role: string; capabilities: string[] };
 
 export type ProductionRunDto = {
   rid: number;
@@ -30,6 +58,41 @@ export type AnalyticsMetricDto = {
   dataPoints: MetricPointDto[];
 };
 
+export type DashboardWorkspaceDto = {
+  summary: {
+    activeRuns: number;
+    totalStations: number;
+    activeFacilities: number;
+    averageOee: number;
+    openDowntimeEvents: number;
+    openAlerts: number;
+    estimatedDowntimeCost: number;
+  };
+  productionTrend: Array<{ timestamp: string; produced: number; good: number; scrap: number; isSynthetic: boolean }>;
+  oeeByFacility: Array<{ facilityId: number; facility: string; oee: number; availability: number; performance: number; quality: number }>;
+  downtimeTrend: Array<{ timestamp: string; incidents: number; hours: number }>;
+  financialImpact: Array<{ facilityId: number; facility: string; downtimeCost: number; lostProductionValue: number; currency: string }>;
+  sensorHealth: { total: number; active: number; fresh: number; stale: number; latestReadingAtUtc: string | null };
+  securitySummary: { failedAuthentication: number; authorizationFailures: number; generatorAdministrationActions: number; integrityAnomalies: number };
+  recentRuns: Array<{ runId: number; facilityId: number; facility: string; stationId: number; station: string; status: string; startTime: string; endTime: string | null; source: string; isSynthetic: boolean }>;
+  recentAlerts: Array<{ alertId: number; title: string; severity: string; status: string; resource: string; createdAt: string }>;
+  recentActivity: Array<{ auditId: number; userId: number; action: string; resource: string; loggedAt: string }>;
+  generatedAtUtc: string;
+};
+
+export type FacilitiesWorkspaceDto = {
+  summary: { activeFacilities: number; totalFacilities: number; averageOee: number; complianceCoverage: number; recentDowntimeHours: number };
+  facilities: Array<{
+    facilityId: number; name: string; location: string; status: string; complianceCoverage: number;
+    performance: WorkspacePerformanceDto;
+    halls: Array<{ hallId: number; name: string; status: string; performance: WorkspacePerformanceDto; lines: Array<{ productionLineId: number; name: string; status: string; performance: WorkspacePerformanceDto; stations: Array<{ stationId: number; name: string; code: string; status: string; performance: WorkspacePerformanceDto }> }> }>;
+  }>;
+  siteAccess: SiteAccessAssignment[];
+  aiInsights: Array<{ alertId: number; title: string; severity: string; resource: string; createdAt: string }>;
+  generatedAtUtc: string;
+};
+export type WorkspacePerformanceDto = { oee: number; availability: number; performance: number; quality: number; downtimeHours: number };
+
 export type SensorStreamDto = { strid: number; name: string; protocol: string; status: string; station: string };
 export type GatewaySensorDto = { sid: number; name: string; sensorType: string; status: string; streamId?: number };
 export type AuditRecordDto = {
@@ -49,7 +112,7 @@ export type AiChatResponse = { conversation_id: string; message: string; assista
 export type AiFailureProbability = { asset_id: string; asset_type: "station"; station_id: number; name: string; code: string; failure_probability: number; risk_level: "low" | "medium" | "high" | "critical"; model: string; factors: string[]; recommendation: string; calculated_at: string };
 export type AiAlert = { alert_id: number; title: string; severity: string; source: string; resource: string; description: string; recommendation: string; confidence: number; status: "open" | "acknowledged" | "resolved"; created_at: string; acknowledged_at?: string | null; acknowledged_by?: string | null; resolved_at?: string | null; resolved_by?: string | null; resolution_note?: string | null };
 export type AiAlertSummary = { open: Record<string, number>; resolved: Record<string, number> };
-export type AiNotification = { notification_id: number; title: string; message: string; severity: string; read: boolean; is_read?: boolean; created_at: string; route?: string | null };
+export type AiNotification = { notification_id: number; user_uid: number | null; title: string; message: string; severity: string; route: string | null; entity_type: string | null; entity_id: string | null; is_read: boolean; read?: boolean; created_at: string; read_at: string | null };
 export type AiRuleType = "sensor_threshold" | "recurring_downtime" | "stale_sensor" | "long_running_run" | "failure_probability";
 export type AiRuleParameters = { window_minutes?: number; incidents_per_hour?: number; window_hours?: number; stale_minutes?: number; hours?: number; warning_probability?: number; critical_probability?: number };
 export type AiRule = { rule_id: number; name: string; rule_type: AiRuleType; enabled: boolean; severity: string; parameters: AiRuleParameters; created_at: string; updated_at: string };

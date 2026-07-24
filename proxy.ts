@@ -9,7 +9,7 @@ async function authenticated(request: NextRequest): Promise<boolean | null> {
   try {
     const base = (process.env.BACKEND_API_URL || (process.env.NODE_ENV === "development" ? "http://localhost:8080" : "")).replace(/\/+$/, "");
     if (!base) return false;
-    const response = await fetch(`${base}/api/dashboard`, {
+    const response = await fetch(`${base}/api/auth/me`, {
       headers: { Authorization: `Bearer ${token}` },
       cache: "no-store",
       signal: AbortSignal.timeout(5000),

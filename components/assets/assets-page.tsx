@@ -1,54 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Plus } from "lucide-react";
-
-import { initialFacilities } from "@/components/facilities/facilities-data";
-
-import { AssetFilters, type AssetViewMode } from "./asset-filters";
-import { AssetDetailModal } from "./asset-detail-modal";
-import { AssetGrid } from "./asset-grid";
-import { AssetListView } from "./asset-list-view";
-import { AssetStatsCards } from "./asset-stats-cards";
-import { assetMaintenanceRecords, assetSensors, initialAssets, type AssetStatus, type IndustrialAsset } from "./assets-data";
-import { RegisterAssetModal } from "./register-asset-modal";
-
-function nextAssetId(assets: IndustrialAsset[]) {
-  const maximum = assets.reduce((highest, asset) => Math.max(highest, Number(asset.assetId.replace(/\D/g, "")) || 0), 0);
-  return `AST-${String(maximum + 1).padStart(4, "0")}`;
-}
+import { useEffect, useState } from "react";
+import { apiRequest } from "@/lib/api-client";
+import type { FacilitiesWorkspaceDto } from "@/lib/backend-dtos";
+import { EmptyState, PageLoadingState, SectionError } from "@/components/ui/async-states";
 
 export function AssetsPage() {
-  const [assets, setAssets] = useState<IndustrialAsset[]>(initialAssets);
-  const [query, setQuery] = useState("");
-  const [site, setSite] = useState("All Sites");
-  const [type, setType] = useState("All Types");
-  const [status, setStatus] = useState<"All" | AssetStatus>("All");
-  const [viewMode, setViewMode] = useState<AssetViewMode>("grid");
-  const [registerOpen, setRegisterOpen] = useState(false);
-  const [selectedAsset, setSelectedAsset] = useState<IndustrialAsset | null>(null);
-
-  const sites = useMemo(() => [...new Set(assets.map((asset) => asset.location.siteName))].sort(), [assets]);
-  const types = useMemo(() => [...new Set(assets.map((asset) => asset.machineType))].sort(), [assets]);
-  const filteredAssets = useMemo(() => {
-    const search = query.trim().toLowerCase();
-    return assets.filter((asset) => {
-      const searchable = [asset.assetId, asset.name, asset.machineType, asset.manufacturer, asset.location.siteName, asset.location.hallName, asset.location.lineName, asset.location.stationName].join(" ").toLowerCase();
-      return (!search || searchable.includes(search)) && (site === "All Sites" || asset.location.siteName === site) && (type === "All Types" || asset.machineType === type) && (status === "All" || asset.lifecycle.status === status);
-    });
-  }, [assets, query, site, status, type]);
-
-  return (
-    <div className="space-y-5 pb-5">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"><div><p className="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-primary">Assets</p><h1 className="mt-1.5 text-2xl font-bold tracking-tight">Asset Registry</h1><p className="mt-1 text-sm text-muted-foreground">Industrial asset inventory — machines, controllers, and production equipment</p></div><button type="button" onClick={() => setRegisterOpen(true)} className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground hover:bg-primary/90"><Plus className="size-4" />Register Asset</button></header>
-
-      <AssetStatsCards assets={assets} />
-      <AssetFilters query={query} onQueryChange={setQuery} site={site} onSiteChange={setSite} sites={sites} type={type} onTypeChange={setType} types={types} status={status} onStatusChange={setStatus} viewMode={viewMode} onViewModeChange={setViewMode} />
-      <p className="font-mono text-[10px] text-muted-foreground">{filteredAssets.length} asset{filteredAssets.length === 1 ? "" : "s"} found</p>
-      {viewMode === "grid" ? <AssetGrid assets={filteredAssets} onSelect={setSelectedAsset} /> : <AssetListView assets={filteredAssets} onSelect={setSelectedAsset} />}
-
-      {registerOpen && <RegisterAssetModal facilities={initialFacilities} nextAssetId={nextAssetId(assets)} onClose={() => setRegisterOpen(false)} onSave={(asset) => { setAssets((items) => [asset, ...items]); setRegisterOpen(false); }} />}
-      {selectedAsset && <AssetDetailModal key={selectedAsset.id} asset={selectedAsset} maintenance={assetMaintenanceRecords.filter((record) => record.assetId === selectedAsset.id)} sensors={assetSensors.filter((sensor) => sensor.assetId === selectedAsset.id)} onClose={() => setSelectedAsset(null)} />}
-    </div>
-  );
+  const [workspace, setWorkspace] = useState<FacilitiesWorkspaceDto>();
+  const [error, setError] = useState("");
+  useEffect(() => { apiRequest<FacilitiesWorkspaceDto>("/api/backend/facilities/workspace").then(setWorkspace).catch((cause) => setError(cause instanceof Error ? cause.message : "Stations could not be loaded.")); }, []);
+  if (!workspace && !error) return <PageLoadingState />;
+  const stations = workspace?.facilities.flatMap((facility) => facility.halls.flatMap((hall) => hall.lines.flatMap((line) => line.stations.map((station) => ({ ...station, facility: facility.name, hall: hall.name, line: line.name }))))) ?? [];
+  return <div className="space-y-5"><header><h1 className="text-2xl font-bold">Assets</h1><p className="mt-1 text-sm text-muted-foreground">Stations are the currently implemented machine resource. No standalone asset API exists.</p></header>{error && <SectionError message={error} />}{!stations.length ? <EmptyState title="No stations available" /> : <section className="grid gap-3 lg:grid-cols-2">{stations.map((station) => <article key={station.stationId} className="rounded-xl border bg-card p-4"><div className="flex justify-between gap-3"><div><h2 className="font-semibold">{station.name}</h2><p className="mt-1 text-xs text-muted-foreground">{station.facility} · {station.hall} · {station.line}</p></div><span className="font-mono text-[10px]">{station.code}</span></div><p className="mt-3 text-xs">Status: {station.status} · OEE {(station.performance.oee * 100).toFixed(1)}%</p></article>)}</section>}<p className="text-xs text-muted-foreground">Asset CRUD is not backend-connected. Products remain production master data and are not presented as physical assets.</p></div>;
 }

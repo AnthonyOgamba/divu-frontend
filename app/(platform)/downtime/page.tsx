@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { DowntimePage } from "@/components/downtime/downtime-page";
+import { AggregatePage } from "@/components/dashboard/aggregate-page";
 
 export const metadata: Metadata = {
   title: "Downtime | DIVU Analytics",
@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  return <DowntimePage />;
+  return <AggregatePage kind="downtime" />;
 }

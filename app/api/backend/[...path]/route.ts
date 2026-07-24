@@ -1,17 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AUTH_COOKIE } from "@/lib/auth/constants";
-import { expireAuthentication, gatewayFailure, publicBackendResponse, requestBackend } from "@/lib/backend-api";
+import { backendUrl, expireAuthentication, gatewayFailure, publicBackendResponse, requestBackend } from "@/lib/backend-api";
 
 type Context = { params: Promise<{ path: string[] }> };
 
 const allowed = [
-  { pattern: /^dashboard(?:\/analytics)?$/, methods: ["GET"] },
+  { pattern: /^auth\/(?:login|forgot-password)$/, methods: ["POST"] },
+  { pattern: /^auth\/me$/, methods: ["GET"] },
+  { pattern: /^profile$/, methods: ["GET", "PATCH"] },
+  { pattern: /^settings\/organization$/, methods: ["GET", "PATCH"] },
+  { pattern: /^users$/, methods: ["GET", "POST"] },
+  { pattern: /^users\/\d+\/invitation$/, methods: ["POST"] },
+  { pattern: /^roles$/, methods: ["GET"] },
+  { pattern: /^dashboard$/, methods: ["GET"] },
   { pattern: /^runs$/, methods: ["GET", "POST"] },
   { pattern: /^runs\/(?:active|stations)$/, methods: ["GET"] },
-  { pattern: /^runs\/(?:dashboard-summary|analytics)$/, methods: ["GET"] },
   { pattern: /^runs\/\d+\/close$/, methods: ["PATCH"] },
   { pattern: /^runs\/\d+\/(?:start|pause|fail)$/, methods: ["PATCH"] },
   { pattern: /^facilities$/, methods: ["GET", "POST"] },
+  { pattern: /^facilities\/workspace$/, methods: ["GET"] },
   { pattern: /^facilities\/\d+\/halls$/, methods: ["GET", "POST"] },
   { pattern: /^halls\/\d+\/lines$/, methods: ["GET", "POST"] },
   { pattern: /^lines\/\d+\/stations$/, methods: ["GET", "POST"] },
@@ -26,8 +33,8 @@ const allowed = [
   { pattern: /^sensors\/\d+$/, methods: ["PUT"] },
   { pattern: /^sensors\/readings$/, methods: ["POST"] },
   { pattern: /^sensors\/runs\/\d+\/readings$/, methods: ["GET"] },
-  { pattern: /^sensors\/analytics$/, methods: ["GET"] },
   { pattern: /^audit$/, methods: ["GET"] },
+  { pattern: /^reports\/export\.xlsx$/, methods: ["GET"] },
   { pattern: /^ai\/alerts$/, methods: ["GET"] },
   { pattern: /^ai\/alerts\/summary$/, methods: ["GET"] },
   { pattern: /^ai\/assets\/failure-probabilities$/, methods: ["GET"] },
@@ -60,6 +67,27 @@ async function handler(request: NextRequest, context: Context) {
   const requestBody = method === "GET" || method === "DELETE" ? "" : await request.text();
   const body = requestBody || undefined;
   try {
+    if (path === "reports/export.xlsx") {
+      const upstream = await fetch(backendUrl(`/api/${path}${query}`), {
+        headers: { Authorization: `Bearer ${token}`, Accept: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" },
+        cache: "no-store",
+        signal: request.signal,
+      });
+      if (upstream.status === 401) {
+        return expireAuthentication(NextResponse.json({ error: "Your session has expired." }, { status: 401 }));
+      }
+      if (!upstream.ok) {
+        const body = upstream.headers.get("content-type")?.includes("application/json")
+          ? await upstream.json().catch(() => null)
+          : null;
+        return publicBackendResponse(body, upstream.status);
+      }
+      const headers = new Headers();
+      headers.set("Content-Type", upstream.headers.get("content-type") || "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      const disposition = upstream.headers.get("content-disposition");
+      if (disposition) headers.set("Content-Disposition", disposition);
+      return new NextResponse(upstream.body, { status: upstream.status, headers });
+    }
     const result = await requestBackend(`/api/${path}${query}`, { method, token, body });
     const response = publicBackendResponse(result.body, result.response.status);
     return result.response.status === 401 ? expireAuthentication(response) : response;

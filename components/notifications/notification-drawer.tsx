@@ -6,6 +6,7 @@ import { AlertTriangle, Bell, Bot, Check, CircleAlert, FileText, ShieldAlert, X 
 import type { DivuNotification, NotificationSeverity } from "./notification-types";
 import type { AiNotification } from "@/lib/backend-dtos";
 import { apiRequest } from "@/lib/api-client";
+import { subscribeSse } from "@/lib/sse-client";
 
 type Tab = "All" | "Critical" | "Olive" | "Approvals" | "Reports" | "Security" | "Operations";
 const tabs: Tab[] = ["All", "Critical", "Olive", "Approvals", "Reports", "Security", "Operations"];
@@ -31,7 +32,7 @@ export function NotificationDrawer({ open, notifications, onClose, onChange }: {
   useEffect(() => { if (!open) return;
     // Loading occurs in response to the drawer becoming visible.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    void loadAi(); const source = new EventSource("/api/backend/ai/events"); source.addEventListener("notification.created", () => void loadAi()); source.addEventListener("notification.read", () => void loadAi()); source.addEventListener("notifications.read_all", () => void loadAi()); return () => source.close();
+    void loadAi(); return subscribeSse("/api/backend/ai/events", ["notification.created", "notification.read", "notifications.read_all"], () => void loadAi());
   }, [open]);
   const mappedAi = useMemo<DivuNotification[]>(() => aiNotifications.map((item) => ({ id:`ai-${item.notification_id}`, title:item.title, type:"Olive", severity: item.severity.toLowerCase()==="critical"?"Critical":item.severity.toLowerCase()==="high"?"High":item.severity.toLowerCase()==="warning"?"Medium":"Low", read:item.read??item.is_read??false, message:item.message, time:new Date(item.created_at).toLocaleString(), source:"Olive", route:item.route||"/local-ai", actions:[...(item.read??item.is_read?[]:["Mark Read"]),"View Olive"] })), [aiNotifications]);
   const combined = useMemo(() => [...mappedAi, ...notifications], [mappedAi, notifications]);

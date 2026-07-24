@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 
-import { GovernanceWorkspace } from "@/components/governance/governance-workspace";
+import { BackendFeatureUnavailable } from "@/components/ui/backend-feature-unavailable";
 
 export const metadata: Metadata = {
   title: "Data Governance",
 };
 
 export default function GovernancePage() {
-  return <GovernanceWorkspace />;
+  return <BackendFeatureUnavailable title="Data Governance" />;
 }

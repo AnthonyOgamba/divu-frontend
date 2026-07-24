@@ -1,5 +1,5 @@
-import { FinancialAnalytics } from "@/components/financial/financial-analytics";
+import { AggregatePage } from "@/components/dashboard/aggregate-page";
 
 export default function FinancialPage() {
-  return <FinancialAnalytics />;
+  return <AggregatePage kind="financial" />;
 }

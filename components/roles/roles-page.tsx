@@ -1,14 +1,14 @@
 "use client";
-import { useState } from "react";
-import { KeyRound, Plus, ShieldCheck, UserRoundCog, Users } from "lucide-react";
-import { PermissionMatrix } from "./permission-matrix";
-import { RoleAssignmentsPanel } from "./role-assignments-panel";
-import { RoleCardsGrid } from "./role-cards";
-import { CreateRoleModal, RoleDetailsModal } from "./role-modals";
-import { roles, type Role } from "./roles-data";
-import { DepartmentsPanel } from "./departments-panel";
-import { initialUsers } from "../users/users-data";
-import { SummaryMetricCard } from "../ui/summary-metric-card";
-export function RolesStatsCards(){const governanceAssignees=initialUsers.filter((user)=>user.governanceAssignments.length>0).length;const cards=[{label:"Total Roles",value:roles.length,note:"RBAC profiles",icon:ShieldCheck},{label:"Administrative Users",value:initialUsers.length,note:"Directory identities",icon:Users},{label:"Governance Assignees",value:governanceAssignees,note:"Named data responsibilities",icon:UserRoundCog},{label:"Permission Types",value:6,note:"Access actions per resource",icon:KeyRound}];return <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{cards.map((card)=><SummaryMetricCard key={card.label} {...card}/>)}</div>}
-export function RolesTabs({active,onChange}:{active:"matrix"|"roles"|"assignments"|"departments";onChange:(tab:"matrix"|"roles"|"assignments"|"departments")=>void}){return <div className="flex border-b">{[["matrix","Permission Matrix"],["roles","Roles"],["assignments","Role Assignments"],["departments","Departments"]].map(([id,label])=><button key={id} type="button" onClick={()=>onChange(id as "matrix"|"roles"|"assignments"|"departments")} className={`border-b-2 px-4 py-3 text-xs font-medium ${active===id?"border-primary text-primary":"border-transparent text-muted-foreground hover:text-foreground"}`}>{label}</button>)}</div>}
-export function RolesPage(){const[tab,setTab]=useState<"matrix"|"roles"|"assignments"|"departments">("matrix");const[detail,setDetail]=useState<Role|null>(null);const[createOpen,setCreateOpen]=useState(false);return <div className="space-y-4 pb-5"><header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><h1 className="text-2xl font-bold tracking-tight">RBAC Administration</h1><p className="mt-1 text-sm text-muted-foreground">Role-based access control, assignments, departments, and permission coverage</p></div><button type="button" onClick={()=>setCreateOpen(true)} className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground"><Plus className="size-3.5"/>Create Role</button></header><RolesStatsCards/><RolesTabs active={tab} onChange={setTab}/>{tab==="matrix"&&<PermissionMatrix/>}{tab==="roles"&&<RoleCardsGrid roles={roles} onDetails={setDetail}/>} {tab==="assignments"&&<RoleAssignmentsPanel roles={roles}/>} {tab==="departments"&&<DepartmentsPanel/>} {detail&&<RoleDetailsModal role={detail} onClose={()=>setDetail(null)}/>} {createOpen&&<CreateRoleModal onClose={()=>setCreateOpen(false)}/>}</div>}
+
+import { useEffect, useState } from "react";
+import { apiRequest } from "@/lib/api-client";
+import type { RoleDto } from "@/lib/backend-dtos";
+import { EmptyState, PageLoadingState, SectionError } from "@/components/ui/async-states";
+
+export function RolesPage() {
+  const [roles, setRoles] = useState<RoleDto[]>([]);
+  const [error, setError] = useState("");
+  useEffect(() => { apiRequest<RoleDto[]>("/api/backend/roles").then(setRoles).catch((cause) => setError(cause instanceof Error ? cause.message : "Roles could not be loaded.")); }, []);
+  if (!roles.length && !error) return <PageLoadingState />;
+  return <div className="space-y-5"><header><h1 className="text-2xl font-bold">Roles and capabilities</h1><p className="mt-1 text-sm text-muted-foreground">Read-only catalog. The backend does not provide role mutation endpoints.</p></header>{error && <SectionError message={error} />}{!roles.length ? <EmptyState title="No roles" /> : <section className="grid gap-3 lg:grid-cols-2">{roles.map((role) => <article key={role.role} className="rounded-xl border bg-card p-4"><h2 className="font-semibold">{role.role}</h2><div className="mt-3 flex flex-wrap gap-1">{role.capabilities.map((capability) => <span key={capability} className="rounded bg-muted px-2 py-1 font-mono text-[9px]">{capability}</span>)}</div></article>)}</section>}</div>;
+}
