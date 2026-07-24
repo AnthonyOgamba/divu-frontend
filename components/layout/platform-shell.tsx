@@ -34,11 +34,14 @@ import {
 import { cn } from "@/lib/utils";
 import { NotificationDrawer } from "@/components/notifications/notification-drawer";
 import { usePlatformWorkflowStore } from "@/lib/platform-workflow-store";
+import { apiRequest } from "@/lib/api-client";
+import { can, type Permission, type PermissionSession } from "@/lib/permissions";
 
 type NavigationItem = {
   label: string;
   href: string;
   icon: React.ElementType;
+  permission: Permission;
 };
 
 type NavigationGroup = {
@@ -50,47 +53,47 @@ const navigation: NavigationGroup[] = [
   {
     label: "Workspace",
     items: [
-      { label: "Dashboard", href: "/", icon: LayoutDashboard },
+      { label: "Dashboard", href: "/", icon: LayoutDashboard, permission: "dashboard.view" },
     ],
   },
   {
     label: "Data",
     items: [
-      { label: "Data Input", href: "/data-input", icon: Database },
-      { label: "Data Governance", href: "/governance", icon: ShieldCheck },
+      { label: "Data Input", href: "/data-input", icon: Database, permission: "data-input.manage" },
+      { label: "Data Governance", href: "/governance", icon: ShieldCheck, permission: "governance.view" },
     ],
   },
   {
     label: "Operations",
     items: [
-      { label: "Facilities", href: "/operations", icon: Settings2 },
-      { label: "Assets", href: "/assets", icon: Cpu },
-      { label: "Sensors", href: "/sensors", icon: Radio },
-      { label: "Downtime", href: "/downtime", icon: FileClock },
+      { label: "Facilities", href: "/operations", icon: Settings2, permission: "facilities.view" },
+      { label: "Assets", href: "/assets", icon: Cpu, permission: "assets.view" },
+      { label: "Sensors", href: "/sensors", icon: Radio, permission: "sensors.view" },
+      { label: "Downtime", href: "/downtime", icon: FileClock, permission: "downtime.view" },
     ],
   },
   {
     label: "Analytics",
     items: [
-      { label: "Financial", href: "/financial", icon: DollarSign },
-      { label: "Reports", href: "/reports", icon: FileText },
+      { label: "Financial", href: "/financial", icon: DollarSign, permission: "financial.view" },
+      { label: "Reports", href: "/reports", icon: FileText, permission: "reports.view" },
     ],
   },
   {
     label: "Administration",
     items: [
-      { label: "Users", href: "/users", icon: Users },
-      { label: "Roles", href: "/roles", icon: ShieldUser },
-      { label: "Activity", href: "/activity", icon: Activity },
+      { label: "Users", href: "/users", icon: Users, permission: "users.manage" },
+      { label: "Roles", href: "/roles", icon: ShieldUser, permission: "roles.manage" },
+      { label: "Activity", href: "/activity", icon: Activity, permission: "activity.view" },
     ],
   },
   {
     label: "Security Center",
     items: [
-      { label: "Olive", href: "/local-ai", icon: Bot },
-      { label: "Security Operations", href: "/security-ops", icon: ShieldEllipsis },
-      { label: "API Security", href: "/api-security", icon: BarChart3 },
-      { label: "Audit Log", href: "/audit", icon: ClipboardList },
+      { label: "Olive", href: "/local-ai", icon: Bot, permission: "olive.use" },
+      { label: "Security Operations", href: "/security-ops", icon: ShieldEllipsis, permission: "security.view" },
+      { label: "API Security", href: "/api-security", icon: BarChart3, permission: "security.view" },
+      { label: "Audit Log", href: "/audit", icon: ClipboardList, permission: "audit.view" },
     ],
   },
 ];
@@ -142,7 +145,7 @@ function ThemeToggle() {
   );
 }
 
-function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
+function SidebarContent({ onNavigate, session, username }: { onNavigate?: () => void; session: PermissionSession; username: string }) {
   const pathname = usePathname();
 
   return (
@@ -177,7 +180,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
       <nav className="min-h-0 flex-1 overflow-y-auto px-3 py-4" aria-label="Platform navigation">
         <div className="space-y-5">
-          {navigation.map((group) => (
+          {navigation.map((group) => ({ ...group, items: group.items.filter((item) => can(session, item.permission)) })).filter((group) => group.items.length).map((group) => (
             <div key={group.label}>
               <p className="mb-1.5 px-3 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">{group.label}</p>
               <div className="space-y-1">
@@ -233,8 +236,8 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
             A
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-[13px] font-semibold">Admin User</span>
-            <span className="block truncate text-[11px] text-muted-foreground">Super Admin</span>
+            <span className="block truncate text-[13px] font-semibold">{username || "DIVU User"}</span>
+            <span className="block truncate text-[11px] text-muted-foreground">{session.role.replaceAll("_", " ")}</span>
           </span>
           <ChevronDown className="size-4 text-muted-foreground" />
         </Link>
@@ -247,6 +250,8 @@ export function PlatformShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [session, setSession] = useState<PermissionSession>({ role: "viewer" });
+  const [username, setUsername] = useState("");
   const notifications = usePlatformWorkflowStore((state) => state.notifications);
   const setNotifications = usePlatformWorkflowStore((state) => state.setNotifications);
   const pageTitle = pageTitles.get(pathname) ?? "DIVU Analytics";
@@ -257,11 +262,18 @@ export function PlatformShell({ children }: { children: React.ReactNode }) {
     window.addEventListener("divu-open-notifications", openNotifications);
     return () => window.removeEventListener("divu-open-notifications", openNotifications);
   }, []);
+  useEffect(() => {
+    let active = true;
+    apiRequest<{ user: { username: string; role: string; permissions?: string[] } }>("/api/auth/session")
+      .then((data) => { if (active) { setSession({ role: data.user.role, permissions: data.user.permissions }); setUsername(data.user.username); } })
+      .catch(() => undefined);
+    return () => { active = false; };
+  }, []);
 
   return (
     <div className="flex h-dvh min-h-[36rem] overflow-hidden bg-background">
       <aside className="hidden w-64 shrink-0 border-r border-sidebar-border lg:block">
-        <SidebarContent />
+        <SidebarContent session={session} username={username} />
       </aside>
 
       {mobileOpen && (
@@ -273,7 +285,7 @@ export function PlatformShell({ children }: { children: React.ReactNode }) {
             onClick={() => setMobileOpen(false)}
           />
           <aside className="relative h-full w-[min(20rem,88vw)] border-r border-sidebar-border shadow-2xl">
-            <SidebarContent onNavigate={() => setMobileOpen(false)} />
+            <SidebarContent session={session} username={username} onNavigate={() => setMobileOpen(false)} />
             <button
               type="button"
               onClick={() => setMobileOpen(false)}

@@ -6,14 +6,27 @@ export class ApiError extends Error {
   }
 }
 
-export async function apiRequest<T>(url: string, init: RequestInit = {}): Promise<T> {
+export class ApiTimeoutError extends ApiError {
+  constructor(public timeoutMs: number) {
+    super(`The request timed out after ${Math.round(timeoutMs / 1000)} seconds.`, 408);
+  }
+}
+
+export type ApiRequestInit = RequestInit & { timeoutMs?: number };
+export const DEFAULT_API_TIMEOUT_MS = 45_000;
+
+export async function apiRequest<T>(url: string, init: ApiRequestInit = {}): Promise<T> {
+  const { timeoutMs = DEFAULT_API_TIMEOUT_MS, signal: callerSignal, ...requestInit } = init;
+  const timeoutSignal = AbortSignal.timeout(timeoutMs);
+  const signal = callerSignal ? AbortSignal.any([callerSignal, timeoutSignal]) : timeoutSignal;
   try {
     const response = await fetch(url, {
-      ...init,
+      ...requestInit,
+      signal,
       credentials: "same-origin",
       headers: {
-        ...(init.body !== undefined ? { "Content-Type": "application/json" } : {}),
-        ...init.headers,
+        ...(requestInit.body !== undefined ? { "Content-Type": "application/json" } : {}),
+        ...requestInit.headers,
       },
     });
     if (response.status === 204) return undefined as T;
@@ -40,6 +53,8 @@ export async function apiRequest<T>(url: string, init: RequestInit = {}): Promis
     return data as T;
   } catch (error) {
     if (error instanceof ApiError) throw error;
+    if (timeoutSignal.aborted && !callerSignal?.aborted) throw new ApiTimeoutError(timeoutMs);
+    if (callerSignal?.aborted) throw error;
     throw new ApiError("Unable to reach DIVU Analytics. Check your connection and try again.", 0);
   }
 }

@@ -6,7 +6,7 @@ import { Activity, ChevronDown, ChevronRight, Layers3 } from "lucide-react";
 import type { Facility } from "./facilities-data";
 import { FacilityStatusBadge, MetricTone } from "./facility-status";
 
-export function ProductionPerformance({ facilities }: { facilities: Facility[] }) {
+export function ProductionPerformance({ facilities, onFacilityChange }: { facilities: Facility[]; onFacilityChange?: (facilityId: string) => void }) {
   const [facilityId, setFacilityId] = useState(facilities[0]?.id ?? "");
   const [collapsedHalls, setCollapsedHalls] = useState<Record<string, boolean>>({});
   const [expandedLines, setExpandedLines] = useState<Record<string, boolean>>({});
@@ -15,7 +15,7 @@ export function ProductionPerformance({ facilities }: { facilities: Facility[] }
   if (!facility) return null;
 
   const lines = facility.halls.flatMap((hall) => hall.lines);
-  const siteOee = Math.round(lines.reduce((total, line) => total + line.oee, 0) / lines.length);
+  const siteOee = lines.length ? Math.round(lines.reduce((total, line) => total + line.oee, 0) / lines.length) : 0;
   const stationCount = lines.reduce((total, line) => total + line.stations.length, 0);
   const totalOutput = lines.reduce((total, line) => total + line.outputPerHour, 0);
 
@@ -23,7 +23,7 @@ export function ProductionPerformance({ facilities }: { facilities: Facility[] }
     <div className="space-y-4">
       <div className="flex flex-col gap-3 rounded-xl border bg-card p-4 shadow-[var(--dv-shadow)] sm:flex-row sm:items-center">
         <label className="text-xs text-muted-foreground" htmlFor="performance-facility">Facility</label>
-        <select id="performance-facility" value={facility.id} onChange={(event) => setFacilityId(event.target.value)} className="h-10 min-w-0 rounded-lg border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/30 sm:min-w-72">{facilities.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
+        <select id="performance-facility" value={facility.id} onChange={(event) => { setFacilityId(event.target.value); onFacilityChange?.(event.target.value); }} className="h-10 min-w-0 rounded-lg border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/30 sm:min-w-72">{facilities.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
         <FacilityStatusBadge status={facility.status} />
         <p className="text-lg font-bold sm:ml-auto">Facility OEE: <MetricTone value={siteOee} /></p>
       </div>
@@ -32,7 +32,7 @@ export function ProductionPerformance({ facilities }: { facilities: Facility[] }
 
       <div className="space-y-3">
         {facility.halls.map((hall) => {
-          const hallOee = Math.round(hall.lines.reduce((total, line) => total + line.oee, 0) / hall.lines.length);
+          const hallOee = hall.lines.length ? Math.round(hall.lines.reduce((total, line) => total + line.oee, 0) / hall.lines.length) : 0;
           const hallOpen = !collapsedHalls[hall.id];
           return (
             <section key={hall.id} className="overflow-hidden rounded-xl border bg-card shadow-[var(--dv-shadow)]">
